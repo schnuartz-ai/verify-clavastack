@@ -19,10 +19,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
-      - name: Trigger Hostinger only for the validated current commit
+      - name: Configure Hostinger SSH
+        env:
+          HOSTINGER_DEPLOY_KEY: ${{ secrets.HOSTINGER_DEPLOY_KEY }}
+        run: |
+          test -n "$HOSTINGER_DEPLOY_KEY" || {
+            echo '::error::HOSTINGER_DEPLOY_KEY is not configured.'
+            exit 1
+          }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$HOSTINGER_DEPLOY_KEY" > ~/.ssh/hostinger_deploy
+          chmod 600 ~/.ssh/hostinger_deploy
+          ssh-keyscan -p 65002 -H 81.16.30.231 >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Deploy the validated commit to the live document root
         env:
           VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
-          HOSTINGER_DEPLOY_WEBHOOK: ${{ secrets.HOSTINGER_DEPLOY_WEBHOOK }}
+          HOSTINGER_HOST: 81.16.30.231
+          HOSTINGER_PORT: '65002'
+          HOSTINGER_USER: u591425504
+          HOSTINGER_DEPLOY_PATH: /home/u591425504/domains/clavastack.com/public_html/verify
         run: bash tools/deploy_hostinger.sh
