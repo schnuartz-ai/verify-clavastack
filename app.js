@@ -1,8 +1,17 @@
 import { hashFile, selfTest, crossCheck } from './vendor/bitsaga/sha256.js';
 
+const siteRoot = new URL('.', import.meta.url);
+const sitePath = (path) => new URL(path, siteRoot).pathname;
+const languagePath = (lang) => lang === 'de' ? sitePath('de/') : siteRoot.pathname;
+const languageFromUrl = () => {
+  const path = window.location.pathname;
+  const german = languagePath('de');
+  return path === german || path === german.slice(0, -1) || path === sitePath('de/index.html') ? 'de' : 'en';
+};
+
 const app = document.getElementById('app');
 const state = {
-  lang: navigator.language?.toLowerCase().startsWith('de') ? 'de' : 'en',
+  lang: languageFromUrl(),
   mode: 'easy',
   modeInfo: false,
   phase: null,
@@ -21,7 +30,7 @@ const state = {
 
 const hardware = [
   { id: 'barebone', label: 'Barebone', image: 'barebone.png', de: 'Offenes Board / Barebone-Case', en: 'Open board / barebone case' },
-  { id: 'snapcase', label: 'Specter DIY (Snap Case)', image: 'diy-snapcase.png', de: 'Steckgehäuse ohne Secure Element', en: 'Snap case without secure element' },
+  { id: 'snapcase', label: 'Specter DIY (Snapcase)', image: 'shield-lite-shop.webp', de: 'Steckgehäuse ohne Secure Element', en: 'Snapcase without secure element' },
   { id: 'lite', label: 'Specter Shield Lite', image: 'shield-lite.webp', de: 'Kunststoffgehäuse mit Smartcard', en: 'Plastic case with smartcard' },
   { id: 'shield', label: 'Specter Shield', image: 'shield.png', de: 'Kunststoffgehäuse mit Akku', en: 'Plastic case with battery' },
   { id: 'metal', label: 'Specter Shield Metal', image: 'shield-metal.webp', de: 'Metallgehäuse mit Akku', en: 'Metal case with battery' },
@@ -38,7 +47,7 @@ const copy = {
     startTitle: 'Welchen Specter hast du?', startIntro: 'Zuerst klären wir, ob du ein leeres Gerät zum ersten Mal flashst oder einen bereits eingerichteten Specter aktualisierst.',
     phaseQuestion: 'Ist dein Specter bereits geflasht?', phaseNew: 'Nein, noch nicht', phaseNewSub: 'Erstinstallation oder Wiederherstellung per Mini-USB', phaseExisting: 'Ja, er läuft bereits', phaseExistingSub: 'Normales Update über die microSD-Karte',
     generation1: 'Specter 1 · Gehäuse wählen', generation2: 'Specter 2', soon: 'Coming soon', soonText: 'Die zweite Generation ist noch nicht veröffentlicht. Updates zu Entwicklung und Verfügbarkeit bekommst du über den Specter-2-Newsletter.', newsletter: 'Für Updates anmelden',
-    mainWebsite: 'Specter-Webseite', buySpecter: 'Specter 1 im Shop', specterGithub: 'Specter-DIY-Quellcode', siteSource: 'Quellcode dieser Prüfseite', proofLink: 'Was diese Prüfung beweisen kann – und was nicht', simulator: 'Specter DIY Simulator',
+    mainWebsite: 'Specter-Webseite', buySpecter: 'Specter 1 im Shop', specterGithub: 'Specter-DIY-Quellcode', siteSource: 'Quellcode dieser Prüfseite', proofLink: 'Was diese Prüfung beweisen kann - und was nicht', simulator: 'Specter DIY Simulator',
     versionQuestion: 'Welche Firmware läuft aktuell auf deinem Gerät?', versionHelp: 'Du findest die Version unter „Device settings“. Du kannst diesen Schritt überspringen; dann zeigen wir alle möglichen Wege, empfehlen aber keinen ungesicherten Einzelschritt.', versionPlaceholder: 'Bitte wählen oder überspringen', versionSkip: 'Ich weiß es nicht / überspringen',
     step1Title: 'Offizielle Firmware laden', step1Intro: 'Die Binärdatei kommt direkt aus dem offiziellen Specter-DIY-Release. Diese Website hostet keine Firmware.',
     chooseFirst: 'Bitte wähle oben zuerst Erstinstallation oder Update und dein Gehäuse.',
@@ -52,19 +61,19 @@ const copy = {
     latestStep: 'Danach: neueste Upgrade-Firmware', unsignedNever: 'Die Datei mit „unsigned“ im Namen ist nicht für die normale Installation gedacht und wird hier nicht angeboten.',
     step2Title: 'Datei lokal prüfen', step2Intro: 'Zieh die heruntergeladene .bin-Datei hierher. SHA-256 wird nur in diesem Browser berechnet; die Datei wird nicht hochgeladen.',
     drop: 'Firmware-Datei hier ablegen', chooseFile: 'Oder Datei auswählen', privacy: 'Kein Upload · keine Anmeldung · kein Tracking', checking: 'Berechne SHA-256',
-    matchTitle: 'Datei erkannt – Hash stimmt überein', mismatchTitle: 'Keine Übereinstimmung', mismatchText: 'Der berechnete Hash stimmt mit keinem Eintrag im Prüfkatalog überein. Diese Datei nicht flashen. Lade sie erneut direkt vom offiziellen Release.',
-    unsignedTitle: 'Historische Datei erkannt – nicht authentifiziert', unsignedText: 'Dieser alte Release hat kein offizielles signiertes Hash-Manifest. Der Vergleich zeigt nur, dass die Datei mit dem hier archivierten GitHub-Download übereinstimmt. Er beweist nicht die Herkunft vom Hersteller.',
+    matchTitle: 'Datei erkannt - Hash stimmt überein', mismatchTitle: 'Keine Übereinstimmung', mismatchText: 'Der berechnete Hash stimmt mit keinem Eintrag im Prüfkatalog überein. Diese Datei nicht flashen. Lade sie erneut direkt vom offiziellen Release.',
+    unsignedTitle: 'Historische Datei erkannt - nicht authentifiziert', unsignedText: 'Dieser alte Release hat kein offizielles signiertes Hash-Manifest. Der Vergleich zeigt nur, dass die Datei mit dem hier archivierten GitHub-Download übereinstimmt. Er beweist nicht die Herkunft vom Hersteller.',
     signedText: 'Der lokale Hash stimmt mit dem Wert aus dem offiziellen signierten Specter-Manifest überein. Die Manifest-Signatur wurde beim Aktualisieren dieses Repositories mit dem unten genannten Fingerprint geprüft; im Browser wird die OpenPGP-Signatur nicht erneut geprüft.',
     notLatest: 'Diese Datei ist nicht die neueste Version.', thisLatest: 'Diese Datei entspricht der aktuell neuesten Version.', latestUncertain: 'Ob diese Datei die neueste Version ist, kann gerade nicht live bestätigt werden.',
     wrongKind: 'Achtung: Diese Datei passt nicht zum gewählten Installationsweg. Für Erstflash brauchst du „initial_firmware“, für ein reguläres SD-Update „specter_upgrade“.',
     versionLabel: 'Release', typeLabel: 'Dateityp', expectedHash: 'Erwarteter SHA-256', computedHash: 'Berechneter SHA-256', signer: 'Manifest-Signierer', fingerprint: 'Fingerabdruck',
-    signatureManual: 'Signatur selbst prüfen', trustTitle: 'Was diese Prüfung beweist – und was nicht', trustText: 'Ein passender Hash bindet deine Datei an einen hier gespeicherten Wert. Die Signatur des Hersteller-Manifests wurde bei der Datenerstellung geprüft, aber eine manipulierte Website könnte auch einen manipulierten Katalog ausliefern. Vergleiche den Schlüssel-Fingerabdruck unabhängig, prüfe das Manifest selbst oder baue die Firmware reproduzierbar aus dem Quellcode. Authentische Firmware kann trotzdem Fehler enthalten; Hardware-Manipulation erkennt diese Seite nicht.',
+    signatureManual: 'Signatur selbst prüfen', trustTitle: 'Was diese Prüfung beweist - und was nicht', trustText: 'Ein passender Hash bindet deine Datei an einen hier gespeicherten Wert. Die Signatur des Hersteller-Manifests wurde bei der Datenerstellung geprüft, aber eine manipulierte Website könnte auch einen manipulierten Katalog ausliefern. Vergleiche den Schlüssel-Fingerabdruck unabhängig, prüfe das Manifest selbst oder baue die Firmware reproduzierbar aus dem Quellcode. Authentische Firmware kann trotzdem Fehler enthalten; Hardware-Manipulation erkennt diese Seite nicht.',
     step3Title: 'Passend zu deinem Gerät flashen', step3Intro: 'Die Gehäuse unterscheiden sich beim Zugang zur Platine. Die Firmware-Dateien selbst sind für Specter 1 identisch.',
     noDevice: 'Wähle oben dein Gehäuse. Danach erscheint die konkrete Anleitung.',
     boardTitle: 'Jumper JP2 auf STLK setzen', boardText: 'Auf der Rückseite des STM32F469I-DISCO sitzt oben rechts der Power-Jumper JP2. Setze die schwarze Brücke auf die mit „STLK“ beziehungsweise „ST-LINK“ beschrifteten Pins (die mittlere der drei Versorgungspositionen). Orientiere dich an der Beschriftung auf deinem Board, nicht allein an der Blickrichtung des Fotos.',
     boardCaption: 'Foto: Waveshare, STM32F469I-DISCO (Rückseite). Kreis markiert JP2. Die STLK-Stellung ist auf der Platine beschriftet.', boardSource: 'ST-Benutzerhandbuch zu JP2',
     sdFormat: 'microSD-Karte FAT-formatiert, maximal 32 GB. Nur eine Datei namens „specter_upgrade_*.bin“ im Wurzelverzeichnis belassen.',
-    bootloader: 'Bei SD-Upgrades prüft der sichere Specter-Bootloader die Signaturen der Upgrade-Datei selbst. Die Browser-Prüfung ist eine zusätzliche, unabhängige Kontrolle – kein Ersatz für diese Geräteprüfung.',
+    bootloader: 'Bei SD-Upgrades prüft der sichere Specter-Bootloader die Signaturen der Upgrade-Datei selbst. Die Browser-Prüfung ist eine zusätzliche, unabhängige Kontrolle - kein Ersatz für diese Geräteprüfung.',
     step4Title: 'Neustart & Kontrolle', step4Intro: 'Nach dem Flashen Gerät neu starten und die Version unter „Device settings“ kontrollieren.',
     afterMigration: 'Wenn du gerade v1.10.3 als Zwischenschritt installiert hast, starte das Gerät neu, kontrolliere die Versionsanzeige und installiere erst dann das neueste Upgrade.',
     archiveTitle: 'Alle Releases im Prüfkatalog', archiveIntro: 'Signierte Manifeste ab v1.4.0 sind im Repository gespiegelt. Frühe Releases und Vorabversionen werden nur als nicht authentifizierbares Archiv geführt.', archiveDate: 'Datum', archiveStatus: 'Prüfstatus', archiveSigned: 'Signiertes Manifest', archiveUnsigned: 'Keine offizielle Signatur', pre: 'Vorabversion',
@@ -95,13 +104,13 @@ const copy = {
     latestStep: 'Then: newest upgrade firmware', unsignedNever: 'The file with “unsigned” in its name is not for normal installation and is not offered here.',
     step2Title: 'Check the file locally', step2Intro: 'Drop the downloaded .bin file here. SHA-256 is computed only in this browser; the file is not uploaded.',
     drop: 'Drop firmware file here', chooseFile: 'Or choose a file', privacy: 'No upload · no account · no tracking', checking: 'Computing SHA-256',
-    matchTitle: 'File recognized – hash matches', mismatchTitle: 'No match', mismatchText: 'The computed hash matches no entry in this catalog. Do not flash this file. Download it again directly from the official release.',
-    unsignedTitle: 'Historical file recognized – not authenticated', unsignedText: 'This early release has no official signed hash manifest. A match shows only that the file equals the GitHub download archived here. It does not prove publisher origin.',
+    matchTitle: 'File recognized - hash matches', mismatchTitle: 'No match', mismatchText: 'The computed hash matches no entry in this catalog. Do not flash this file. Download it again directly from the official release.',
+    unsignedTitle: 'Historical file recognized - not authenticated', unsignedText: 'This early release has no official signed hash manifest. A match shows only that the file equals the GitHub download archived here. It does not prove publisher origin.',
     signedText: 'The local hash matches a value in an official signed Specter manifest. That manifest was checked against the fingerprint below when this repository was updated; the browser does not re-verify the OpenPGP signature.',
     notLatest: 'This file is not the newest version.', thisLatest: 'This file is currently the newest version.', latestUncertain: 'The latest-version status cannot be confirmed live right now.',
     wrongKind: 'Warning: this file does not fit your chosen installation route. Initial flashing needs “initial_firmware”; a normal SD update needs “specter_upgrade”.',
     versionLabel: 'Release', typeLabel: 'File type', expectedHash: 'Expected SHA-256', computedHash: 'Computed SHA-256', signer: 'Manifest signer', fingerprint: 'Fingerprint',
-    signatureManual: 'Verify the signature yourself', trustTitle: 'What this proves – and what it does not', trustText: 'A matching hash binds your file to a value stored here. The publisher manifest signature was checked when building the catalog, but a compromised website could serve a compromised catalog too. Compare the key fingerprint independently, verify the manifest yourself, or reproducibly build from source. Authentic firmware may still have bugs, and this page cannot detect hardware tampering.',
+    signatureManual: 'Verify the signature yourself', trustTitle: 'What this proves - and what it does not', trustText: 'A matching hash binds your file to a value stored here. The publisher manifest signature was checked when building the catalog, but a compromised website could serve a compromised catalog too. Compare the key fingerprint independently, verify the manifest yourself, or reproducibly build from source. Authentic firmware may still have bugs, and this page cannot detect hardware tampering.',
     step3Title: 'Flash your exact device', step3Intro: 'Cases differ in how you access the board. The firmware files are the same for all Specter 1 variants.',
     noDevice: 'Choose your case above to see the specific instructions.',
     boardTitle: 'Set jumper JP2 to STLK', boardText: 'On the rear of the STM32F469I-DISCO, the JP2 power jumper sits at the top right. Put the black shunt over the pins marked “STLK” or “ST-LINK” (the middle of the three power positions). Follow the marking on your own board, not only the orientation of the photo.',
@@ -158,7 +167,7 @@ function recommendedFiles() {
     output += downloadCard(mainUpgrade, `2 · ${t('latestStep')}`);
   } else if (state.phase === 'existing' && !state.current) {
     output += `<div class="note warning"><strong>${t('noVersionTitle')}</strong><br>${t('noVersionText')}</div>`;
-    output += downloadCard(migrationFile, `v1.4.0–v1.9.0 · ${t('upgradeFile')}`);
+    output += downloadCard(migrationFile, `v1.4.0-v1.9.0 · ${t('upgradeFile')}`);
     output += downloadCard(mainUpgrade, `≥ v1.10.3 · ${t('upgradeFile')}`);
     output += downloadCard(mainInitial, `< v1.4.0 · ${t('initialFile')}`);
   } else if (state.phase === 'existing' && state.current === pinned.tag) {
@@ -200,7 +209,7 @@ function initialInstructions() {
   const device = state.device;
   const lines = {
     barebone: { de: ['Lege das offene Board so hin, dass du die Rückseite und JP2 siehst. Das Barebone-Case muss nicht geöffnet werden.', 'Setze JP2 auf STLK. Verbinde den ST-LINK-Anschluss CN1 per Mini-USB direkt mit dem PC.', 'Kopiere die geprüfte initial_firmware-Datei auf das eingebundene Laufwerk DIS_F469NI. Warte, bis das Board neu startet.'], en: ['Place the open board so you can see its back and JP2. The barebone case need not be opened.', 'Set JP2 to STLK. Connect ST-LINK port CN1 directly to the PC with Mini-USB.', 'Copy the checked initial_firmware file to the DIS_F469NI drive. Wait for the board to restart.'] },
-    snapcase: { de: ['Öffne das Snap Case vorsichtig, damit JP2 zugänglich wird. Kabel und Scanner nicht abreißen.', 'Setze JP2 auf STLK (mittlere, beschriftete Stellung). Verbinde dann CN1 per Mini-USB mit dem PC.', 'Kopiere die geprüfte initial_firmware-Datei auf DIS_F469NI. Nach dem Neustart das Gehäuse wieder einrasten.'], en: ['Open the snap case carefully to reach JP2 without pulling scanner cables.', 'Set JP2 to STLK (labeled middle position), then connect CN1 via Mini-USB to the PC.', 'Copy the checked initial_firmware file to DIS_F469NI. Reassemble the snap case after reboot.'] },
+    snapcase: { de: ['Öffne das Snapcase vorsichtig, damit JP2 zugänglich wird. Kabel und Scanner nicht abreißen.', 'Setze JP2 auf STLK (mittlere, beschriftete Stellung). Verbinde dann CN1 per Mini-USB mit dem PC.', 'Kopiere die geprüfte initial_firmware-Datei auf DIS_F469NI. Nach dem Neustart das Gehäuse wieder einrasten.'], en: ['Open the Snapcase carefully to reach JP2 without pulling scanner cables.', 'Set JP2 to STLK (labeled middle position), then connect CN1 via Mini-USB to the PC.', 'Copy the checked initial_firmware file to DIS_F469NI. Reassemble the Snapcase after reboot.'] },
     lite: { de: ['Stecke zuerst das Micro-USB-Kabel zur Stromversorgung des Shield Lite ein.', 'Erst danach verbindest du den ST-LINK-Anschluss CN1 des Boards per Mini-USB mit dem PC. Prüfe, ob das Laufwerk DIS_F469NI erscheint; beide Kabel müssen angeschlossen bleiben.', 'Kopiere die geprüfte initial_firmware-Datei auf DIS_F469NI. Warte auf den Neustart, bevor du Kabel entfernst.'], en: ['First plug in the Micro-USB cable to power the Shield Lite.', 'Only then connect the board’s ST-LINK CN1 port to the PC with Mini-USB. Check that the DIS_F469NI drive appears; keep both cables connected.', 'Copy the checked initial_firmware file to DIS_F469NI. Wait for reboot before removing cables.'] },
     shield: { de: ['Schalte das Gerät aus und schraube das Kunststoffgehäuse vorsichtig auf. Lege Akku- und Scannerkabel nicht unter Zug.', 'Stelle JP2 auf STLK und verbinde CN1 per Mini-USB direkt mit dem PC.', 'Kopiere die geprüfte initial_firmware-Datei auf DIS_F469NI. Nach dem Neustart Kabel prüfen und das Gehäuse wieder vollständig zusammenschrauben.'], en: ['Power off and carefully unscrew the plastic case. Do not strain the battery or scanner cables.', 'Set JP2 to STLK and connect CN1 directly to the PC with Mini-USB.', 'Copy the checked initial_firmware file to DIS_F469NI. After reboot check the cables and fully reassemble the case.'] },
     metal: { de: ['Schalte das Gerät aus. Das Metallgehäuse muss für einen Erstflash geöffnet werden; folge dem eingebetteten Aufbauvideo für die Reihenfolge der Teile.', 'Lege die Platine frei, setze JP2 auf STLK und verbinde CN1 per Mini-USB direkt mit dem PC.', 'Kopiere die geprüfte initial_firmware-Datei auf DIS_F469NI. Nach dem Neustart Jumper, Akku und Kabel prüfen und das Gehäuse wieder zusammenbauen.'], en: ['Power off. The metal case must be opened for an initial flash; follow the embedded assembly video for the part order.', 'Expose the board, set JP2 to STLK, and connect CN1 directly to the PC via Mini-USB.', 'Copy the checked initial_firmware file to DIS_F469NI. After reboot check jumper, battery, and cables, then reassemble.'] },
@@ -228,23 +237,36 @@ function modeSelector() {
   return `<div class="mode-wrap"><div class="mode-switch" role="group" aria-label="${state.lang === 'de' ? 'Detailstufe' : 'Detail level'}">${['easy','advanced','cypherpunk'].map(m => `<button type="button" data-action="mode" data-value="${m}" aria-pressed="${state.mode===m}">${t(m)}</button>`).join('')}</div><button type="button" class="mode-info-button" data-action="modeinfo" aria-label="${t('modeHelpLabel')}" aria-expanded="${state.modeInfo}" aria-controls="mode-help">i</button><div class="mode-help" id="mode-help" role="status" ${state.modeInfo ? '' : 'hidden'}><strong>${t('modeHelpTitle')}</strong><p>${t('modeHelpEasy')}</p><p>${t('modeHelpAdvanced')}</p><p>${t('modeHelpCypherpunk')}</p></div></div>`;
 }
 
+function localizePaths(markup) {
+  return markup
+    .replaceAll('src="assets/', `src="${sitePath('assets/')}`)
+    .replaceAll('href="TRUST.md"', `href="${sitePath('TRUST.md')}"`)
+    .replaceAll('href="signatures/', `href="${sitePath('signatures/')}`);
+}
+
 function render() {
+  document.documentElement.lang = state.lang;
+  document.title = state.lang === 'de' ? 'Specter Firmware prüfen · ClavaStack' : 'Verify Specter firmware · ClavaStack';
+  document.querySelector('meta[name="description"]').content = state.lang === 'de'
+    ? 'Specter DIY Firmware lokal prüfen und sicher installieren. Offizielle Releases, signierte Prüfsummen und Anleitungen für alle Specter-1-Gehäuse.'
+    : 'Verify Specter DIY firmware locally and install it safely. Official releases, signed checksums, and instructions for every Specter 1 case.';
+  document.querySelector('link[rel="canonical"]').href = new URL(languagePath(state.lang), window.location.origin).href;
+  document.querySelector('.skip').textContent = state.lang === 'de' ? 'Zum Inhalt springen' : 'Skip to content';
   if (!state.catalog) {
     app.innerHTML = `<main id="main" class="loading" role="alert">${state.error ? e(state.error) : state.lang === 'de' ? 'Release-Daten werden geladen …' : 'Loading release data …'}</main>`;
     return;
   }
-  document.documentElement.lang = state.lang;
   const pinned = latestPinned();
-  app.innerHTML = `<div class="${modeClass()}">
+  app.innerHTML = localizePaths(`<div class="${modeClass()}">
     <header class="topbar"><div class="topbar-inner"><a class="brand" href="https://clavastack.com" target="_blank" rel="noopener noreferrer" aria-label="ClavaStack · Verify your Specter"><img src="assets/clavastack-logo.png" alt=""><span class="brand-text"><span class="brand-wordmark">ClavaStack</span><span class="brand-sub">Verify your Specter</span></span></a><nav aria-label="${state.lang === 'de' ? 'Schritte' : 'Steps'}"><ol class="steps-nav">${[['download',t('download')],['verify',t('verify')],['install',t('install')],['finish',t('finish')]].map(([id,label],i)=>`<li><a href="#${id}"><b>${i+1}</b>${label}</a></li>`).join('')}</ol></nav><div class="top-actions">${modeSelector()}<div class="lang-switch" role="group" aria-label="Language"><button type="button" data-action="lang" data-value="de" aria-pressed="${state.lang==='de'}">DE</button><button type="button" data-action="lang" data-value="en" aria-pressed="${state.lang==='en'}">EN</button></div></div></div></header>
     <main id="main" class="shell"><section class="hero"><p class="eyebrow">${t('eyebrow')}</p><h1>${t('hero1')}<br><em>${t('hero2')}</em></h1><p class="lead">${t('lead')}</p><div class="meta-line"><span>${t('heroMeta1')}</span><span>${t('heroMeta2')}</span><span>${t('heroMeta3')}</span></div></section>
-      <section class="section" id="choose"><h2>${t('startTitle')}</h2><p class="section-intro">${t('startIntro')}</p><div class="question"><p class="question-label">${t('phaseQuestion')}</p><div class="choice-row"><button class="choice-card" type="button" data-action="phase" data-value="new" aria-pressed="${state.phase==='new'}"><strong>${t('phaseNew')}</strong><span>${t('phaseNewSub')}</span></button><button class="choice-card" type="button" data-action="phase" data-value="existing" aria-pressed="${state.phase==='existing'}"><strong>${t('phaseExisting')}</strong><span>${t('phaseExistingSub')}</span></button></div></div>${state.phase==='existing' ? `<div class="question"><label class="question-label" for="current-version">${t('versionQuestion')}</label><p class="small">${t('versionHelp')}</p><select class="version-select" id="current-version"><option value="">${t('versionSkip')}</option>${stable().map(r=>`<option value="${e(r.tag)}" ${state.current===r.tag?'selected':''}>${e(r.tag)}</option>`).join('')}</select></div>` : ''}<p class="generation">${t('generation1')}</p><div class="device-grid">${hardware.map(h=>`<button type="button" class="device-card" data-action="device" data-value="${h.id}" aria-pressed="${state.device===h.id}"><div class="device-image"><img src="assets/${h.image}" alt="${e(h.label)}" loading="lazy"></div><div class="device-copy"><strong>${e(h.label)}</strong><span>${e(h[state.lang])}</span></div></button>`).join('')}</div><p class="generation">${t('generation2')}</p><div class="gen2"><img src="assets/specter-2.png" alt="Specter 2 teaser" loading="lazy"><div><strong>${t('soon')}</strong><p>${t('soonText')}</p><div class="link-group"><a href="https://clavastack.com/specter-2/newsletter" target="_blank" rel="noopener noreferrer">${t('newsletter')} ↗</a><a href="https://clavastack.com/" target="_blank" rel="noopener noreferrer">${t('mainWebsite')} ↗</a><a href="https://clavastack.com/products" target="_blank" rel="noopener noreferrer">${t('buySpecter')} ↗</a></div></div></div></section>
+      <section class="section" id="choose"><h2>${t('startTitle')}</h2><p class="section-intro">${t('startIntro')}</p><div class="question"><p class="question-label">${t('phaseQuestion')}</p><div class="choice-row"><button class="choice-card" type="button" data-action="phase" data-value="new" aria-pressed="${state.phase==='new'}"><strong>${t('phaseNew')}</strong><span>${t('phaseNewSub')}</span></button><button class="choice-card" type="button" data-action="phase" data-value="existing" aria-pressed="${state.phase==='existing'}"><strong>${t('phaseExisting')}</strong><span>${t('phaseExistingSub')}</span></button></div></div>${state.phase==='existing' ? `<div class="question"><label class="question-label" for="current-version">${t('versionQuestion')}</label><p class="small">${t('versionHelp')}</p><select class="version-select" id="current-version"><option value="">${t('versionSkip')}</option>${stable().map(r=>`<option value="${e(r.tag)}" ${state.current===r.tag?'selected':''}>${e(r.tag)}</option>`).join('')}</select></div>` : ''}<p class="generation">${t('generation1')}</p><div class="device-grid">${hardware.map(h=>`<button type="button" class="device-card" data-action="device" data-value="${h.id}" aria-pressed="${state.device===h.id}"><div class="device-image"><img src="assets/${h.image}" alt="${e(h.imageAlt ?? h.label)}" loading="lazy"></div><div class="device-copy"><strong>${e(h.label)}</strong><span>${e(h[state.lang])}</span></div></button>`).join('')}</div><p class="generation">${t('generation2')}</p><div class="gen2"><img src="assets/specter-2.png" alt="Specter 2 teaser" loading="lazy"><div><strong>${t('soon')}</strong><p>${t('soonText')}</p><div class="link-group"><a href="https://clavastack.com/specter-2/newsletter" target="_blank" rel="noopener noreferrer">${t('newsletter')} ↗</a><a href="https://clavastack.com/" target="_blank" rel="noopener noreferrer">${t('mainWebsite')} ↗</a><a href="https://clavastack.com/products" target="_blank" rel="noopener noreferrer">${t('buySpecter')} ↗</a></div></div></div></section>
       <section class="section" id="download"><div class="section-head"><span class="step-number">01</span><h2>${t('step1Title')}</h2></div><p class="section-intro">${t('step1Intro')}</p>${recommendedFiles()}</section>
       <section class="section" id="verify"><div class="section-head"><span class="step-number">02</span><h2>${t('step2Title')}</h2></div><p class="section-intro">${t('step2Intro')}</p><label class="file-drop" id="drop-zone"><strong>${t('drop')}</strong><span>${t('chooseFile')}</span><span class="small">${t('privacy')}</span><input id="firmware-file" type="file" accept=".bin,application/octet-stream" aria-label="${t('chooseFile')}" ${state.hashReady?'':'disabled'}></label>${fileResult()}<div class="mode-extra advanced"><div class="note"><strong>${t('trustTitle')}</strong><br>${t('trustText')}</div></div></section>
       <section class="section" id="install"><div class="section-head"><span class="step-number">03</span><h2>${t('step3Title')}</h2></div><p class="section-intro">${t('step3Intro')}</p>${!state.device ? `<p>${t('noDevice')}</p>` : needsInitial() ? initialInstructions() : state.phase==='existing' ? upgradeInstructions() : `<p>${t('chooseFirst')}</p>`}</section>
       <section class="section" id="finish"><div class="section-head"><span class="step-number">04</span><h2>${t('step4Title')}</h2></div><p class="section-intro">${t('step4Intro')}</p>${needsMigration() ? `<div class="note warning">${t('afterMigration')}</div>` : ''}<div class="note" id="proof"><strong>${t('trustTitle')}</strong><br>${t('trustText')} <a href="TRUST.md">${t('proofLink')} ↗</a></div>${archive()}<div class="link-group"><a href="https://github.com/cryptoadvance/specter-diy/releases" target="_blank" rel="noopener noreferrer">${t('official')} ↗</a><a href="TRUST.md">${t('methodology')} ↗</a></div></section>
-    </main><footer class="footer"><div class="shell footer-inner"><div><div class="footer-brand"><img src="assets/specter-ghost-logo.png" alt="" width="23" height="23"><strong>ClavaStack × Specter</strong></div><p>${t('footerText')}</p><p class="status-line">${state.lang==='de'?'Katalog aktualisiert':'Catalog updated'}: ${e(state.catalog.generatedAt?.slice(0,10))} · ${state.catalog.releases.length} Releases · ${state.catalog.releases.filter(r=>r.authenticity==='upstream-signed-manifest').length} ${state.lang==='de'?'signierte Manifeste':'signed manifests'}</p></div><div class="footer-links"><a href="https://github.com/schnuartz-ai/verify-clavastack" target="_blank" rel="noopener noreferrer">${t('siteSource')} ↗</a><a href="TRUST.md">${t('proofLink')} ↗</a><a href="https://clavastack.com/" target="_blank" rel="noopener noreferrer">ClavaStack ↗</a><a href="https://clavastack.com/products" target="_blank" rel="noopener noreferrer">${t('buySpecter')} ↗</a><a href="https://try.clavastack.com/" target="_blank" rel="noopener noreferrer">${t('simulator')} ↗</a><a href="https://github.com/cryptoadvance/specter-diy" target="_blank" rel="noopener noreferrer">${t('specterGithub')} ↗</a><a href="https://clavastack.com/newsletter" target="_blank" rel="noopener noreferrer">Newsletter ↗</a></div></div></footer>
-  </div>`;
+    </main><footer class="footer"><div class="shell footer-inner"><div><div class="footer-brand"><img src="assets/clavastack-logo.png" alt="" width="23" height="23"><strong>ClavaStack × Specter</strong></div><p>${t('footerText')}</p><p class="status-line">${state.lang==='de'?'Katalog aktualisiert':'Catalog updated'}: ${e(state.catalog.generatedAt?.slice(0,10))} · ${state.catalog.releases.length} Releases · ${state.catalog.releases.filter(r=>r.authenticity==='upstream-signed-manifest').length} ${state.lang==='de'?'signierte Manifeste':'signed manifests'}</p></div><div class="footer-links"><a href="https://github.com/Schnuartz/verify-clavastack" target="_blank" rel="noopener noreferrer">${t('siteSource')} ↗</a><a href="TRUST.md">${t('proofLink')} ↗</a><a href="https://clavastack.com/" target="_blank" rel="noopener noreferrer">ClavaStack ↗</a><a href="https://clavastack.com/products" target="_blank" rel="noopener noreferrer">${t('buySpecter')} ↗</a><a href="https://try.clavastack.com/" target="_blank" rel="noopener noreferrer">${t('simulator')} ↗</a><a href="https://github.com/cryptoadvance/specter-diy" target="_blank" rel="noopener noreferrer">${t('specterGithub')} ↗</a><a href="https://clavastack.com/newsletter" target="_blank" rel="noopener noreferrer">Newsletter ↗</a></div></div></footer>
+  </div>`);
 }
 
 async function handleFile(file) {
@@ -267,7 +289,14 @@ app.addEventListener('click', (event) => {
   const button = event.target.closest('[data-action]');
   if (!button) return;
   const action = button.dataset.action, value = button.dataset.value;
-  if (action === 'lang' && ['de','en'].includes(value)) state.lang = value;
+  if (action === 'lang' && ['de','en'].includes(value)) {
+    if (value !== state.lang) {
+      state.lang = value;
+      window.history.pushState(null, '', languagePath(value) + window.location.hash);
+      render();
+    }
+    return;
+  }
   if (action === 'mode' && ['easy','advanced','cypherpunk'].includes(value)) state.mode = value;
   if (action === 'modeinfo') state.modeInfo = !state.modeInfo;
   if (action === 'phase' && ['new','existing'].includes(value)) { state.phase = value; if (value === 'new') state.current = ''; }
@@ -275,6 +304,7 @@ app.addEventListener('click', (event) => {
   if (action === 'video') state.videoLoaded = true;
   render();
 });
+window.addEventListener('popstate', () => { state.lang = languageFromUrl(); render(); });
 app.addEventListener('change', (event) => {
   if (event.target.id === 'current-version') { state.current = event.target.value; render(); }
   if (event.target.id === 'firmware-file') handleFile(event.target.files?.[0]);
@@ -285,7 +315,7 @@ app.addEventListener('drop', (event) => { const zone = event.target.closest('#dr
 
 async function bootstrap() {
   try {
-    const response = await fetch('./release.json', { cache: 'no-store' });
+    const response = await fetch(sitePath('release.json'), { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const catalog = await response.json();
     if (catalog.schema !== 1 || !Array.isArray(catalog.releases) || catalog.releases.length < 30) throw new Error('Invalid catalog');

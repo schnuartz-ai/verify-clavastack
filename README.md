@@ -1,6 +1,6 @@
 # Specter firmware verification · ClavaStack
 
-An independent, static, bilingual (German/English) guide for checking and installing [Specter DIY](https://github.com/cryptoadvance/specter-diy) firmware. Designed for later deployment beneath `clavastack.com` as a directory with a trailing slash, for example `/specter-verify/`. No hosting or DNS change is made by this repository.
+An independent, static, bilingual (English/German) guide for checking and installing [Specter DIY](https://github.com/cryptoadvance/specter-diy) firmware. Maintained in the [ClavaStack owner's repository](https://github.com/Schnuartz/verify-clavastack) and published in English at [verify.clavastack.com](https://verify.clavastack.com/) and in German at [verify.clavastack.com/de/](https://verify.clavastack.com/de/). Each language has its own direct URL, canonical URL and `hreflang` links; the language switch updates the address without resetting the current selection.
 
 The user flow follows the four-step structure of [Bitsaga's SeedSigner verifier](https://github.com/bitsagarob/seedsigner-verify) (MIT), adapted to Specter's distinct initial-flash and SD-upgrade paths. The layout uses the supplied Specter brand palette and Montserrat heading font. All firmware links go to upstream GitHub; no firmware binary is shipped or uploaded here.
 
@@ -27,7 +27,19 @@ The 14 older releases and prereleases lack an official signed manifest. Their ha
 python -m http.server 8000
 ```
 
-Open `http://localhost:8000/`. No install/build step or package manager is required. A local HTTP server is necessary for `fetch('./release.json')` and module loading; `file://` is not supported.
+Open `http://localhost:8000/` for English or `http://localhost:8000/de/` for German. No install/build step or package manager is required. A local HTTP server is necessary for catalog fetching and module loading; `file://` is not supported.
+
+The local page makes one live request to the GitHub releases API for newest-version status. If that request fails or is rate-limited, it explicitly reports that freshness is unconfirmed. The firmware file remains entirely local.
+
+## Publishing
+
+The static site consists of `index.html`, `de/index.html`, `app.js`, `style.css`, `release.json`, `assets/`, `vendor/`, `keys/`, `signatures/` and the linked Markdown documents. Serve those files together from the same site root. Use HTTPS. The scoped `.htaccess` asks Hostinger to revalidate site files after each push; the versioned CSS/JS links in both HTML files also break the previous one-week browser cache. `release.json` is fetched with `cache: 'no-store'`. The included CI workflow checks every committed signed manifest, JavaScript syntax, local image paths and the repository link on pushes and pull requests. The live deployment is configured for Hostinger's `public_html/verify` directory; its webhook URL is stored as the GitHub Actions secret `HOSTINGER_DEPLOY_WEBHOOK`.
+
+The repository is public for independent source review, but the production site is served by Hostinger rather than GitHub Pages.
+
+For Hostinger's legacy hPanel Git form on the `clavastack.com` hosting account, connect the `main` branch and set **Install Path to `verify`**, relative to that account's `public_html`. The subdomain's document root was verified in hPanel as `.../domains/clavastack.com/public_html/verify` on 2026-09-14. Do not leave Install Path empty, since that targets the main site's `public_html`. Check the current subdomain mapping before deployment, and remove Hostinger's `default.php` placeholder from `verify` only after confirming there are no user files in that target.
+
+Hostinger's auto-deployment webhook URL is stored as the repository Actions secret `HOSTINGER_DEPLOY_WEBHOOK`. The included deployment workflow calls that webhook only after the latest `main` commit passes the catalog and source checks. Never commit the webhook URL or hosting credentials. A successful webhook call only requests a Hostinger deployment; confirm the deployment log and live HTTPS page separately.
 
 ## Update the release catalog
 
@@ -40,7 +52,7 @@ python tools/check_catalog.py
 
 This refreshes the data and signed-manifest copies; it does not push, publish or deploy. For a new signing identity, review its independent publication source and deliberately add its fingerprint to `tools/update_releases.py` before running. Never silently treat a new key as trusted.
 
-The included GitHub Actions workflow checks upstream daily and commits a catalog change only when all manifests still validate. It discovers the actual signer from each manifest among pinned public keys, so new releases from those signers need no manual version-number edits. It refreshes the checked timestamp at least every 30 days even if no release has changed, reducing the risk of GitHub disabling this public repository's schedule for inactivity. A genuinely new signing key, changed asset naming, upstream outage or disabled GitHub Actions schedule still requires attention; it never silently trusts a new key. The page checks GitHub live on every visit and warns immediately if a newer release has appeared before the next catalog refresh. See [GitHub's schedule limitations](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+The included GitHub Actions workflow checks upstream daily and commits a catalog change only when all manifests still validate. Because GitHub does not start push workflows for commits made with `GITHUB_TOKEN`, the refresh explicitly dispatches `Validate verifier` with the expected commit SHA; after successful validation, that same run requests Hostinger deployment. Ordinary human pushes still use the separate `workflow_run` deployment path. Both paths use the shared deployment script and refuse to deploy a commit that is no longer current. An unchanged catalog does not deploy. The `verify_pipeline` manual input can exercise the refresh-to-deployment chain without fabricating a release. It discovers the actual signer from each manifest among pinned public keys, so new releases from those signers need no manual version-number edits. It refreshes the checked timestamp at least every 30 days even if no release has changed, reducing the risk of GitHub disabling this public repository's schedule for inactivity. A genuinely new signing key, changed asset naming, upstream outage or disabled GitHub Actions schedule still requires attention; it never silently trusts a new key. The page checks GitHub live on every visit and warns immediately if a newer release has appeared before the next catalog refresh. See [GitHub's schedule limitations](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
 ## Site-source signing
 
